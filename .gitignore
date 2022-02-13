@@ -129,5 +129,10 @@ dmypy.json
 .pyre/
 
 .idea/
-dialogs/*.json
+dialogs_gaya/*.json
+dialogs_gaya_en/*.json
 dialogs_en/*.json
+objects_gaya/*.json
+objects_gaya_en/*.json
+objects_en/*.json
+*.zip

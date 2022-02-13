@@ -1,11 +1,9 @@
 import json
-import sys
 import time
 from googletrans import Translator  # pip install googletrans==4.0.0rc1
 import argparse
 import os
 from print_neatly import print_neatly
-import copy
 
 
 def translate(file_path, tr, src='it', dst='en', verbose=False, max_retries=5, max_len=55):
@@ -20,56 +18,66 @@ def translate(file_path, tr, src='it', dst='en', verbose=False, max_retries=5, m
             print(target, '->', translation)
         return text
 
-    anomalies = 0
+    def translate_and_check(text, remove_escape=True, neatly=False, keep_space=True):
+        text_tr = None
+        if remove_escape:
+            text = text.replace('\n', ' ')
+        try:
+            text_tr = translate_sentence(text)
+        except:
+            for _ in range(max_retries):
+                try:
+                    time.sleep(1)
+                    text_tr = translate_sentence(text)
+                except:
+                    pass
+                if text_tr is not None:
+                    break
+        if text_tr is None:
+            print('Anomaly: {}'.format(text))
+            return None, 0
+        if neatly:
+            try:
+                text_neat = print_neatly(text_tr, max_len)
+                if len(text_neat) > 1:
+                    text_tr = text_neat[0] + '\n' + text_neat[1]
+                else:
+                    text_tr = text_neat[0]
+            except:
+                pass
+        if keep_space:
+            if text[0] == ' ' and text_tr[0] != ' ':
+                text_tr = ' ' + text_tr
+        return text_tr, 1
+
     translations = 0
     f = open(file_path)
     data = json.load(f)
     f.close()
-    num_ids = len([e for e in data["id"] if e is not None])
+    num_ids = len([e for e in data if e is not None])
     i = 0
     for d in data:
         if d is not None:
             print('{}: {}/{}'.format(file_path, i+1, num_ids))
             i += 1
-            name_tr = None
-            try:
-                name_tr = translate_sentence(d['name'])
-                translations += 1
-            except:
-                for _ in range(max_retries):
-                    try:
-                        time.sleep(1)
-                        name_tr = translate_sentence(d['name'])
-                        translations += 1
-                    except:
-                        pass
-            if name_tr is None:
-                anomalies += 1
-                print('Anomaly {}: {}'.format(anomalies, d['name']))
-            d['name'] = name_tr
-
-            desc_tr = None
-            d['description'].replace('\n', ' ')
-            try:
-                desc_tr = translate_sentence(d['description'])
-                translations += 1
-            except:
-                for _ in range(max_retries):
-                    try:
-                        time.sleep(1)
-                        desc_tr = translate_sentence(d['description'])
-                        translations += 1
-                    except:
-                        pass
-            if desc_tr is None:
-                anomalies += 1
-                print('Anomaly {}: {}'.format(anomalies, d['description']))
-            try:
-                text_neat = print_neatly(desc_tr, max_len)
-                desc_tr = text_neat[0] + '\n' + text_neat[1]
-            except:
-                pass
-            d['description'] = desc_tr
+            if 'name' in d.keys() and len(d['name']) > 0:
+                name_tr, success = translate_and_check(d['name'], remove_escape=True, neatly=False)
+                d['name'] = name_tr
+                translations += success
+            if 'description' in d.keys() and len(d['description']) > 0:
+                desc_tr, success = translate_and_check(d['description'], remove_escape=True, neatly=True)
+                d['description'] = desc_tr
+                translations += success
+            if 'profile' in d.keys() and len(d['profile']) > 0:
+                prf_tr, success = translate_and_check(d['profile'], remove_escape=True, neatly=True)
+                d['profile'] = prf_tr
+                translations += success
+            for m in range(1, 5):
+                message = 'message' + str(m)
+                if message in d.keys() and len(d[message]) > 0:
+                    message_tr, success = translate_and_check(d[message], remove_escape=False, neatly=False)
+                    d[message] = message_tr
+                    translations += success
     return data, translations
 
 
@@ -90,12 +98,14 @@ if __name__ == '__main__':
         os.makedirs(dest_folder)
     for file in os.listdir(args.input_folder):
         file_path = os.path.join(args.input_folder, file)
-        print('translating file: {}'.format(file_path))
+        if os.path.isfile(os.path.join(dest_folder, file)):
+            print('skipped file {} because it has already been translated'.format(file_path))
+            continue
         if file.endswith('.json'):
-            if args.print_neatly:
-                new_data, t = translate(file_path, tr=Translator(), max_len=args.max_len,
-                                        src=args.source_lang, dst=args.dest_lang, verbose=args.verbose,
-                                        max_retries=args.max_retries)
+            print('translating file: {}'.format(file_path))
+            new_data, t = translate(file_path, tr=Translator(), max_len=args.max_len,
+                                    src=args.source_lang, dst=args.dest_lang, verbose=args.verbose,
+                                    max_retries=args.max_retries)
             translations += t
             new_file = os.path.join(dest_folder, file)
             with open(new_file, 'w') as f:
