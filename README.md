@@ -11,12 +11,12 @@
 
 ## Why should you use it? 🤔
 
-👉 RPG games usually consists of many thousand of dialog events and other forms of text displaying valuables information to
-understand the plot of the game, but also to know the effect and proprieties of various objects present in the game such as items, weapons,
-skills, enemies, ... . 
+👉 RPG games usually consist of many thousands of dialog events and other forms of text displaying valuable information
+to understand the plot of the game, but also to know the effect and proprieties of various objects present in the game
+such as items, weapons, skills, enemies, ... .
 
 👉 Translating an RPG game from one language to another would thus require an enormous amount of time
-and effort for a human, but it is a task that can be easily accomplished by a machine, or at least speed-up considerably the
+and effort for a human, but it is a task that can be easily accomplished by a machine, or at least speed up considerably the
 work of a human translator saving costs and time.
 
 👉 This project implements a tool that is able to automatically translate a game deployed with [RPGMaker-MV](https://www.rpgmakerweb.com/products/rpg-maker-mv).
@@ -40,7 +40,7 @@ Other files that need to be translated, but deserve particular attention are:
 - `MapXXX.json`: contains the **dialogs** relative to all the maps. Basically it contains most of the dialogs on the
   game which would probably require a massive amount of time if translated manually 🗺️.
 
-The remaining files are not translate since they don't contain much text to translate such as `System.json` or there is
+The remaining files are not translated since they don't contain much text to translate such as `System.json` or there is
 nothing critical to translate such as `Animations.json`.
 
 ## Usage 💡
@@ -49,9 +49,10 @@ nothing critical to translate such as `Animations.json`.
 
 **Note**: the program uses a Google Translate API to perform translations, thus a **stable** internet connection is required.
 
-1. Install dependencies: `pip install -r requirements.txt`.
-2. Copy `CommonEvents.json` and all the `MapXXX.json` files from you game `data/folder` to this project `dialogs` folder.
-3. For a basic usage, run the command:
+1. Clone this repo: `git clone https://github.com/davide97l/rpgmaker-mv-translator`.
+2. Install dependencies: `pip install -r requirements.txt`.
+3. Copy `CommonEvents.json` and all the `MapXXX.json` files from you game `data/folder` to this project `dialogs` folder.
+4. For a basic usage, run the command:
 ```
   python dialogs_translator.py --print_neatly --source_lang it --dest_lang en
 ```
