@@ -219,7 +219,7 @@ if __name__ == '__main__':
             new_file = os.path.join(dest_folder, file)
             with open(new_file, 'w') as f:
                 if not args.no_format:
-                    json.dump(new_data, f, indent=4)
+                    json.dump(new_data, f, indent=4, ensure_ascii=False)
                 else:
-                    json.dump(new_data, f)
+                    json.dump(new_data, f, ensure_ascii=False)
     print('\ndone! translated in total {} dialog windows'.format(translations))
