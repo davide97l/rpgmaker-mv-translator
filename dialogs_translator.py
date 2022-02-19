@@ -21,9 +21,8 @@ def translate(file_path, tr, src='it', dst='en', verbose=False, max_retries=5):
         return text
 
     translations = 0
-    f = open(file_path)
-    data = json.load(f)
-    f.close()
+    with open(file_path, 'r', encoding='utf-8') as datafile:
+        data = json.load(datafile)
     num_events = len([e for e in data["events"] if e is not None])
     i = 0
     for events in data["events"]:
@@ -65,9 +64,8 @@ def translate_neatly(file_path, tr, src='it', dst='en', verbose=False, max_len=4
         return text
 
     translations = 0
-    f = open(file_path)
-    data = json.load(f)
-    f.close()
+    with open(file_path, 'r', encoding='utf-8') as datafile:
+        data = json.load(datafile)
     num_events = len([e for e in data["events"] if e is not None])
     i = 0
     for events in data["events"]:
@@ -128,9 +126,8 @@ def translate_neatly_common_events(file_path, tr, src='it', dst='en', verbose=Fa
         return text
 
     translations = 0
-    f = open(file_path)
-    data = json.load(f)
-    f.close()
+    with open(file_path, 'r', encoding='utf-8') as datafile:
+        data = json.load(datafile)
     num_ids = len([e for e in data if e is not None])
     i = 0
     for d in data:
