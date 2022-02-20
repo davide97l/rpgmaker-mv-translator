@@ -107,7 +107,7 @@ if __name__ == '__main__':
                                     max_retries=args.max_retries)
             translations += t
             new_file = os.path.join(dest_folder, file)
-            with open(new_file, 'w') as f:
+            with open(new_file, 'w', encoding='utf-8') as f:
                 if not args.no_format:
                     json.dump(new_data, f, indent=4, ensure_ascii=False)
                 else:
