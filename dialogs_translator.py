@@ -1,11 +1,13 @@
+import argparse
+import copy
 import json
+import os
 import sys
 import time
+
 from googletrans import Translator  # pip install googletrans==4.0.0rc1
-import argparse
-import os
+
 from print_neatly import print_neatly
-import copy
 
 
 def translate(file_path, tr, src='it', dst='en', verbose=False, max_retries=5):
@@ -20,8 +22,20 @@ def translate(file_path, tr, src='it', dst='en', verbose=False, max_retries=5):
             print(target, '->', translation)
         return text
 
+    def try_translate_sentence(text):
+        try:
+            return (translate_sentence(text), True)
+        except:
+            for _ in range(max_retries):
+                try:
+                    time.sleep(1)
+                    return (translate_sentence(text), True)
+                except:
+                    pass
+            return (text, False)
+
     translations = 0
-    with open(file_path, 'r', encoding='utf-8') as datafile:
+    with open(file_path, 'r', encoding='utf-8-sig') as datafile:
         data = json.load(datafile)
     num_events = len([e for e in data["events"] if e is not None])
     i = 0
@@ -31,23 +45,46 @@ def translate(file_path, tr, src='it', dst='en', verbose=False, max_retries=5):
             i += 1
             for pages in events['pages']:
                 for list in pages['list']:
+
+                    # Plain text (ex: ["plain text"])
                     if list['code'] == 401:
-                        success = False
-                        try:
-                            list['parameters'][0] = translate_sentence(list['parameters'][0])
-                            success = True
-                        except:
-                            for _ in range(max_retries):
-                                try:
-                                    time.sleep(1)
-                                    list['parameters'][0] = translate_sentence(list['parameters'][0])
-                                    success = True
-                                except:
-                                    pass
-                                if success:
-                                    break
+                        # null or empty string check
+                        if not list['parameters'][0]:
+                            continue
+                        # translate
+                        list['parameters'][0], success = try_translate_sentence(list['parameters'][0])
                         if not success:
-                            print('Anomaly: {}'.format(list['parameters'][0]))
+                            print('Anomaly plain text: {}'.format(list['parameters'][0]))
+                        else:
+                            translations += 1
+
+                    # Choices (ex: [["yes", "no"], 1, 0, 2, 0])
+                    elif list['code'] == 102:
+                        # null or empty list check
+                        if not list['parameters'][0]:
+                            continue
+                        # translate list
+                        for j, choice in enumerate(list['parameters'][0]):
+                            # null or empty string check
+                            if not choice:
+                                continue
+                            # translate
+                            list['parameters'][0][j], success = try_translate_sentence(choice)
+                            if not success:
+                                print('Anomaly choices: {}'.format(choice))
+                            else:
+                                translations += 1
+
+                    # Choices (answer) (ex: [0, "yes"])
+                    elif list['code'] == 402:
+                        # invalid length null or empty string check
+                        if len(list['parameters']) != 2 or not list['parameters'][1]:
+                            print('Anomaly choices (answer) - Unexpected 402 Code: {}'.format(list['parameters']))
+                            continue
+                        # translate
+                        list['parameters'][1], success = try_translate_sentence(list['parameters'][1])
+                        if not success:
+                            print('Anomaly choices (answer): {}'.format(list['parameters'][1]))
                         else:
                             translations += 1
     return data, translations
@@ -63,8 +100,20 @@ def translate_neatly(file_path, tr, src='it', dst='en', verbose=False, max_len=4
         text = translation
         return text
 
+    def try_translate_sentence(text):
+        try:
+            return (translate_sentence(text), True)
+        except:
+            for _ in range(max_retries):
+                try:
+                    time.sleep(1)
+                    return (translate_sentence(text), True)
+                except:
+                    pass
+            return (text, False)
+
     translations = 0
-    with open(file_path, 'r', encoding='utf-8') as datafile:
+    with open(file_path, 'r', encoding='utf-8-sig') as datafile:
         data = json.load(datafile)
     num_events = len([e for e in data["events"] if e is not None])
     i = 0
@@ -76,26 +125,56 @@ def translate_neatly(file_path, tr, src='it', dst='en', verbose=False, max_len=4
                 len_list = len(pages['list'])
                 list_it = 0
                 while list_it < len_list:
-                    if pages['list'][list_it]['code'] == 401:
+                    # 102 Choices (dont nestly translate) (ex: [["yes", "no"], 1, 0, 2, 0])
+                    if pages['list'][list_it]['code'] == 102:
+                        # null or empty list check
+                        if not pages['list'][list_it]['parameters'][0]:
+                            list_it += 1
+                            continue
+                        # translate list
+                        for j, choice in enumerate(pages['list'][list_it]['parameters'][0]):
+                            # null or empty string check
+                            if not choice:
+                                print('Anomaly choices - Unexpected 102 code: {}'.format(choice))
+                                continue
+                            # translate
+                            pages['list'][list_it]['parameters'][0][j], success = try_translate_sentence(choice)
+                            if not success:
+                                print('Anomaly choices: {}'.format(choice))
+                            else:
+                                translations += 1
+                        list_it += 1
+
+                    # 402 Choices (answer) (dont nestly translate) (ex: [0, "yes"])
+                    elif pages['list'][list_it]['code'] == 402:
+                        # invalid length null or empty string check
+                        if len(pages['list'][list_it]['parameters']) != 2 or not pages['list'][list_it]['parameters'][1]:
+                            print('Anomaly choices (answer) - Unexpected 402 Code: {}'.format(pages['list'][list_it]['parameters']))
+                            list_it += 1
+                            continue
+                        # translate
+                        pages['list'][list_it]['parameters'][1], success = try_translate_sentence(pages['list'][list_it]['parameters'][1])
+                        if not success:
+                            print('Anomaly choices (answer): {}'.format(pages['list'][list_it]['parameters'][1]))
+                        else:
+                            translations += 1
+                        list_it += 1
+
+                    # 401 Plain text (to nestly translate) (ex: ["plain text"])
+                    elif pages['list'][list_it]['code'] == 401:
                         list_it_2 = list_it + 1
                         text = copy.deepcopy(pages['list'][list_it]['parameters'])
                         while pages['list'][list_it_2]['code'] == 401:
                             text.append(pages['list'][list_it_2]['parameters'][0])
                             list_it_2 += 1
                         text = ' '.join(text)
-                        text_tr = None
-                        try:
-                            text_tr = translate_sentence(text)
-                        except:
-                            for _ in range(max_retries):
-                                try:
-                                    time.sleep(1)
-                                    text_tr = translate_sentence(text)
-                                except:
-                                    pass
-                                if text_tr is not None:
-                                    break
-                        if text_tr is None:
+                        # empty string check
+                        if not text:
+                            list_it = list_it_2
+                            continue
+                        # translate
+                        text_tr, success = try_translate_sentence(text)
+                        if (not success) or (text_tr is None):
                             print('Anomaly: {}'.format(text))
                         else:
                             try:
@@ -126,7 +205,7 @@ def translate_neatly_common_events(file_path, tr, src='it', dst='en', verbose=Fa
         return text
 
     translations = 0
-    with open(file_path, 'r', encoding='utf-8') as datafile:
+    with open(file_path, 'r', encoding='utf-8-sig') as datafile:
         data = json.load(datafile)
     num_ids = len([e for e in data if e is not None])
     i = 0
@@ -144,6 +223,10 @@ def translate_neatly_common_events(file_path, tr, src='it', dst='en', verbose=Fa
                         text.append(d['list'][list_it_2]['parameters'][0])
                         list_it_2 += 1
                     text = ' '.join(text)
+                    # empty string check
+                    if not text:
+                        list_it = list_it_2
+                        continue
                     text_tr = None
                     try:
                         text_tr = translate_sentence(text)
