@@ -1,8 +1,10 @@
-import json
-import time
-from googletrans import Translator  # pip install googletrans==4.0.0rc1
 import argparse
+import json
 import os
+import time
+
+from googletrans import Translator  # pip install googletrans==4.0.0rc1
+
 from print_neatly import print_neatly
 
 
@@ -50,33 +52,61 @@ def translate(file_path, tr, src='it', dst='en', verbose=False, max_retries=5, m
                 text_tr = ' ' + text_tr
         return text_tr, 1
 
+    def translate_based_on_keys(dict_or_list, keys, translations=0, remove_escape=True, neatly=False, array_translate=False):
+        if isinstance(dict_or_list, dict):
+            for d in dict_or_list:
+                if isinstance(dict_or_list[d], dict) or isinstance(dict_or_list[d], list):
+                    translations += translate_based_on_keys(dict_or_list[d], keys, translations, remove_escape, neatly, array_translate)
+                elif d in keys and len(dict_or_list[d]) > 0:
+                    tr, success = translate_and_check(dict_or_list[d], remove_escape, neatly)
+                    dict_or_list[d] = tr
+                    translations += success
+        elif isinstance(dict_or_list, list):
+            for i in range(len(dict_or_list)):
+                if isinstance(dict_or_list[i], dict) or isinstance(dict_or_list[i], list):
+                    translations += translate_based_on_keys(dict_or_list[i], keys, translations, remove_escape, neatly, array_translate)
+                elif array_translate and isinstance(dict_or_list[i], str) and len(dict_or_list[i]) > 0:
+                    tr, success = translate_and_check(dict_or_list[i], remove_escape, neatly)
+                    dict_or_list[i] = tr
+                    translations += success
+        return translations
+
     translations = 0
     with open(file_path, 'r', encoding='utf-8-sig') as datafile:
         data = json.load(datafile)
     num_ids = len([e for e in data if e is not None])
     i = 0
-    for d in data:
-        if d is not None:
-            print('{}: {}/{}'.format(file_path, i+1, num_ids))
-            i += 1
-            if 'name' in d.keys() and len(d['name']) > 0:
-                name_tr, success = translate_and_check(d['name'], remove_escape=True, neatly=False)
-                d['name'] = name_tr
-                translations += success
-            if 'description' in d.keys() and len(d['description']) > 0:
-                desc_tr, success = translate_and_check(d['description'], remove_escape=True, neatly=True)
-                d['description'] = desc_tr
-                translations += success
-            if 'profile' in d.keys() and len(d['profile']) > 0:
-                prf_tr, success = translate_and_check(d['profile'], remove_escape=True, neatly=True)
-                d['profile'] = prf_tr
-                translations += success
-            for m in range(1, 5):
-                message = 'message' + str(m)
-                if message in d.keys() and len(d[message]) > 0:
-                    message_tr, success = translate_and_check(d[message], remove_escape=False, neatly=False)
-                    d[message] = message_tr
+
+    if file_path.endswith('GalleryList.json'):
+        translations += translate_based_on_keys(data, ['displayName', 'hint', 'stageText', 'sceneText', 'text'], translations)
+    
+    elif file_path.endswith('RubiList.json'):
+        translations += translate_based_on_keys(data, [], translations, array_translate=True)
+
+    else:
+        for d in data:
+            if d is not None:
+                print('{}: {}/{}'.format(file_path, i+1, num_ids))
+                i += 1
+                if 'name' in d.keys() and len(d['name']) > 0:
+                    name_tr, success = translate_and_check(d['name'], remove_escape=True, neatly=False)
+                    d['name'] = name_tr
                     translations += success
+                if 'description' in d.keys() and len(d['description']) > 0:
+                    desc_tr, success = translate_and_check(d['description'], remove_escape=True, neatly=True)
+                    d['description'] = desc_tr
+                    translations += success
+                if 'profile' in d.keys() and len(d['profile']) > 0:
+                    prf_tr, success = translate_and_check(d['profile'], remove_escape=True, neatly=True)
+                    d['profile'] = prf_tr
+                    translations += success
+                for m in range(1, 5):
+                    message = 'message' + str(m)
+                    if message in d.keys() and len(d[message]) > 0:
+                        message_tr, success = translate_and_check(d[message], remove_escape=False, neatly=False)
+                        d[message] = message_tr
+                        translations += success
+
     return data, translations
 
 
