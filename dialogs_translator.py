@@ -11,13 +11,27 @@ import google.generativeai as genai # Replaced googletrans
 
 from print_neatly import print_neatly
 
+# Global language map
+LANGUAGE_MAP = {
+    'en': 'English',
+    'es': 'Spanish',
+    'it': 'Italian',
+    'fr': 'French',
+    'de': 'German',
+    'pt': 'Portuguese',
+    'ja': 'Japanese',
+    'ko': 'Korean',
+    'zh': 'Chinese',
+    # Add other common languages as needed
+}
 
 def translate(file_path, model, src='it', dst='en', verbose=False, max_retries=5): # Removed tr, added model
 
     def translate_sentence(text_to_translate): # Renamed text to text_to_translate to avoid conflict
         target = text_to_translate
-        # translation = tr.translate(target, src=src, dest=dst).text # Old googletrans call
-        prompt = f"Translate the following text from {src} to {dst}: {target}"
+        src_full = LANGUAGE_MAP.get(src, src)  # Fallback to src code if not in map
+        dst_full = LANGUAGE_MAP.get(dst, dst)  # Fallback to dst code if not in map
+        prompt = f"Translate the following text from {src_full} to {dst_full}: {target}"
         try:
             response = model.generate_content(prompt)
             translation = response.text
@@ -113,8 +127,9 @@ def translate_neatly(file_path, model, src='it', dst='en', verbose=False, max_le
 
     def translate_sentence(text_to_translate): # Renamed text
         target = text_to_translate
-        # translation = tr.translate(target, src=src, dest=dst).text # Old googletrans call
-        prompt = f"Translate the following text from {src} to {dst}: {target}"
+        src_full = LANGUAGE_MAP.get(src, src)  # Fallback to src code if not in map
+        dst_full = LANGUAGE_MAP.get(dst, dst)  # Fallback to dst code if not in map
+        prompt = f"Translate the following text from {src_full} to {dst_full}: {target}"
         try:
             response = model.generate_content(prompt)
             translation = response.text
@@ -232,7 +247,9 @@ def translate_neatly_common_events(file_path, model, src='it', dst='en', verbose
     # It doesn't have a try_translate_sentence helper.
     def translate_sentence_common(text_to_translate): # Renamed text
         target = text_to_translate
-        prompt = f"Translate the following text from {src} to {dst}: {target}"
+        src_full = LANGUAGE_MAP.get(src, src)  # Fallback to src code if not in map
+        dst_full = LANGUAGE_MAP.get(dst, dst)  # Fallback to dst code if not in map
+        prompt = f"Translate the following text from {src_full} to {dst_full}: {target}"
         translation_result = None # Initialize
         try:
             response = model.generate_content(prompt)

@@ -65,9 +65,9 @@ class TestDialogsTranslator(unittest.TestCase):
         )
 
         self.assertEqual(num_translations, 1)
-        mock_model_instance.generate_content.assert_called_once_with(
-            f"Translate the following text from it to en: {self.text_to_translate_lc}"
-        )
+        # Updated prompt to use full language names
+        expected_prompt = f"Translate the following text from Italian to English: {self.text_to_translate_lc}"
+        mock_model_instance.generate_content.assert_called_once_with(expected_prompt)
         self.assertEqual(
             translated_data["events"][0]["pages"][0]["list"][0]["parameters"][0],
             self.expected_final_text_lc
